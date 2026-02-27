@@ -1,0 +1,12 @@
+{
+  "displayName": "Looga Sound System",
+  "name": "com.loogasoft.loogasoundsystem",
+  "description": "A highly flexible and customizable way to play audio clips",
+  "version": "0.1.0",
+  "author": {
+    "name": "LoogaSoft"
+  },
+  "dependencies": {
+    "com.unity.ugui": "1.0.0"
+  }
+}
