@@ -282,7 +282,8 @@ namespace LoogaSoft.SoundSystem.Runtime
                 Pitch = req.pitch,
                 StartTime = startTime,
                 EndTime = startTime + duration + DURATION_PADDING,
-                IsPlaying = false
+                IsPlaying = false,
+                IsPooled = req.overrideSource == null
             });
         }
         
@@ -436,14 +437,14 @@ namespace LoogaSoft.SoundSystem.Runtime
             
             _tickManager = _rootObject.AddComponent<SoundTickManager>();
             
-            #if UNITY_EDITOR
+            /*#if UNITY_EDITOR
             if (!Application.isPlaying)
             {
                 EditorApplication.update += _tickManager.GetType()
                     .GetMethod("EditorUpdate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?
                     .CreateDelegate(typeof(EditorApplication.CallbackFunction), _tickManager) as EditorApplication.CallbackFunction;
             }
-            #endif
+            #endif*/
             
             for (int i = 0; i < START_POOL_SIZE; i++)
                 ReturnSource(CreateNewSource());
@@ -461,6 +462,7 @@ namespace LoogaSoft.SoundSystem.Runtime
         public double StartTime;
         public double EndTime;
         public bool IsPlaying;
+        public bool IsPooled;
         
         public AudioClip Clip;
         public float Volume;
@@ -552,7 +554,7 @@ namespace LoogaSoft.SoundSystem.Runtime
                         _completeCallbacks.Remove(id);
                     }
                     
-                    if (voice.Source.transform.parent == _rootObject.transform)
+                    if (voice.IsPooled)
                         ReturnSource(voice.Source);
                     
                     _indicesToRemove.Add(i);
