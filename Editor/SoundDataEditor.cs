@@ -19,6 +19,8 @@ namespace LoogaSoft.SoundSystem.Editor
         private SerializedProperty _loopTypeProperty;
         private SerializedProperty _loopCyclesProperty;
 
+        private Rect _cachedDropArea;
+
         private void OnEnable()
         {
             _clipsProperty = serializedObject.FindProperty("soundClips");
@@ -58,9 +60,7 @@ namespace LoogaSoft.SoundSystem.Editor
 
         private void DrawClipsWithDragDrop()
         {
-            Rect dropArea = EditorGUILayout.BeginVertical();
-            
-            HandleDragDrop(dropArea, _clipsProperty);
+            EditorGUILayout.BeginVertical();
 
             EditorGUI.BeginChangeCheck();
             EditorGUILayout.PropertyField(_clipsProperty, true);
@@ -69,10 +69,12 @@ namespace LoogaSoft.SoundSystem.Editor
                 serializedObject.ApplyModifiedProperties();
             }
             
+            HandleDragDrop(_cachedDropArea, _clipsProperty);
+            
             EditorGUILayout.EndVertical();
 
             if (Event.current.type == EventType.Repaint)
-                dropArea = GUILayoutUtility.GetLastRect();
+                _cachedDropArea = GUILayoutUtility.GetLastRect();
         }
         
         private void DrawLoopSettings()
