@@ -9,36 +9,38 @@ using System.Threading.Tasks;
 
 namespace LoogaSoft.SoundSystem.Runtime
 {
-    public struct SoundTask
+    public readonly struct SoundTask
     {
-        private readonly List<AudioSource> _sources;
+        internal readonly AudioSource SingleSource;
+        internal readonly List<AudioSource> MultipleSources;
         
-        internal List<AudioSource> Sources => _sources;
-        
-        public SoundTask(AudioSource source)
+        internal SoundTask(AudioSource source)
         {
-            _sources = new List<AudioSource> { source };
+            SingleSource = source;
+            MultipleSources = null;
         }
 
-        public SoundTask(List<AudioSource> sources)
+        internal SoundTask(List<AudioSource> sources)
         {
-            _sources = sources;
+            SingleSource = null;
+            MultipleSources = sources;
         }
 
         public void Stop()
         {
-            if (_sources == null) 
-                return;
-            foreach (var source in _sources)
-                source?.Stop();
+            // if (MultipleSources == null) 
+            //     return;
+            // foreach (var source in MultipleSources)
+            //     source?.Stop();
+            SoundSystem.CancelTask(this);
         }
 
         public bool IsPlaying()
         {
-            if (_sources == null || _sources.Count == 0) 
+            if (MultipleSources == null || MultipleSources.Count == 0) 
                 return false;
             
-            return _sources.Exists(source => source.isPlaying); 
+            return MultipleSources.Exists(source => source.isPlaying); 
         }
     }
 }

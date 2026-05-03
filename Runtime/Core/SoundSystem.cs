@@ -333,6 +333,18 @@ namespace LoogaSoft.SoundSystem.Runtime
         }
         private static bool IsSoundDataValid(SoundData data) => data != null && data.soundClips != null && data.soundClips.Length > 0;
         private static bool IsSoundClipValid(SoundClip clip) => clip != null && clip.clip != null;
+
+        internal static void CancelTask(SoundTask task)
+        {
+            if (_tickManager != null)
+                _tickManager.CancelTaskVoices(task);
+        }
+
+        internal static void ClearCallback(int instanceId)
+        {
+            if (_completeCallbacks.ContainsKey(instanceId))
+                _completeCallbacks.Remove(instanceId);
+        }
         internal static void RegisterCallback(AudioSource source, Action callback)
         {
             if (source == null || callback == null) 
@@ -374,7 +386,7 @@ namespace LoogaSoft.SoundSystem.Runtime
             return source;
         }
         
-        private static void ReturnSource(AudioSource source)
+        internal static void ReturnSource(AudioSource source)
         {
             if (source == null) 
                 return;
@@ -569,6 +581,42 @@ namespace LoogaSoft.SoundSystem.Runtime
                 int lastIndex = _voices.Count - 1;
                 _voices[index] = _voices[lastIndex];
                 _voices.RemoveAt(lastIndex);
+            }
+        }
+
+        internal void CancelTaskVoices(SoundTask task)
+        {
+            //iterate backwards since we're removing elements
+            for (int i = _voices.Count - 1; i >= 0; i--)
+            {
+                ActiveVoice voice = _voices[i];
+                bool isMatch = false;
+                
+                //check if voice belongs to cancelled task
+                if (task.MultipleSources != null)
+                    isMatch = task.MultipleSources.Contains(voice.Source);
+                else if (task.SingleSource != null)
+                    isMatch = task.SingleSource == voice.Source;
+
+                if (isMatch)
+                {
+                    int id = voice.Source.GetInstanceID();
+                    
+                    //clear callbacks so we don't end up calling OnComplete
+                    ClearCallback(id);
+                    
+                    //stop source and return to pool
+                    if (voice.IsPooled)
+                        ReturnSource(voice.Source);
+                    //stop if override source
+                    else 
+                        voice.Source.Stop();
+                    
+                    //remove from active tracking list
+                    int lastIndex = _voices.Count - 1;
+                    _voices[i] = _voices[lastIndex];
+                    _voices.RemoveAt(lastIndex);
+                }
             }
         }
     }
