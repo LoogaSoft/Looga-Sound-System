@@ -14,6 +14,8 @@ namespace LoogaSoft.SoundSystem.Runtime
         public SoundValue pitch = new(1f);
         [SoundValueRange(0f, 5f)]
         public SoundValue delay = new(0f);
+        [SoundValueRange(0.01f, 10f)]
+        public SoundValue playbackSpeed = new(1f);
         
         public SoundPlayType playType = SoundPlayType.Random;
         public SoundLoopType loopType = SoundLoopType.OneShot;

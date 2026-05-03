@@ -6,7 +6,8 @@ namespace LoogaSoft.SoundSystem.Runtime
         {
             Volume,
             Pitch,
-            Delay
+            Delay,
+            PlaybackSpeed
         }
 
         internal readonly ArgType Type;
@@ -30,5 +31,8 @@ namespace LoogaSoft.SoundSystem.Runtime
 
         public static SoundArgs Delay(float delay) => new(ArgType.Delay, delay, 0f, false);
         public static SoundArgs Delay(float min, float max) => new(ArgType.Delay, min, max, true);
+        
+        public static SoundArgs PlaybackSpeed(float speed) => new(ArgType.PlaybackSpeed, speed, max: 1f, false);
+        public static SoundArgs PlaybackSpeed(float min, float max) => new(ArgType.PlaybackSpeed, min, max, true);
     }
 }

@@ -14,6 +14,7 @@ namespace LoogaSoft.SoundSystem.Editor
         private SerializedProperty _volumeProperty;
         private SerializedProperty _pitchProperty;
         private SerializedProperty _delayProperty;
+        private SerializedProperty _playbackSpeedProperty;
         private SerializedProperty _playTypeProperty;
         private SerializedProperty _cyclesBeforeRepeatProperty;
         private SerializedProperty _loopTypeProperty;
@@ -27,6 +28,7 @@ namespace LoogaSoft.SoundSystem.Editor
             _volumeProperty = serializedObject.FindProperty("volume");
             _pitchProperty = serializedObject.FindProperty("pitch");
             _delayProperty = serializedObject.FindProperty("delay");
+            _playbackSpeedProperty = serializedObject.FindProperty("playbackSpeed");
             _playTypeProperty = serializedObject.FindProperty("playType");
             _cyclesBeforeRepeatProperty = serializedObject.FindProperty("cyclesBeforeCanRepeat");
             _loopTypeProperty = serializedObject.FindProperty("loopType");
@@ -41,6 +43,7 @@ namespace LoogaSoft.SoundSystem.Editor
             EditorGUILayout.PropertyField(_volumeProperty);
             EditorGUILayout.PropertyField(_pitchProperty);
             EditorGUILayout.PropertyField(_delayProperty);
+            EditorGUILayout.PropertyField(_playbackSpeedProperty);
             
             EditorGUILayout.Space();
             

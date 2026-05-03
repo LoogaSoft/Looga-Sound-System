@@ -142,7 +142,7 @@ namespace LoogaSoft.SoundSystem.Runtime
             _requestBatch.Clear();
             if (!IsSoundClipValid(clip))
                 return false;
-            AddRequest(1f, 1f, 0f, clip, 0, pos, parent, overrideSource);
+            AddRequest(1f, 1f, 0f, 1f,  clip, 0, pos, parent, overrideSource);
             return true;
         }
         //convert sound data configuration into request
@@ -155,6 +155,10 @@ namespace LoogaSoft.SoundSystem.Runtime
             float mVol = data.volume.GetValue();
             float mPitch = data.pitch.GetValue();
             float mDelay = data.delay.GetValue();
+            float mPlaybackSpeed = data.playbackSpeed.GetValue();
+            
+            if (mPlaybackSpeed <= 0.01f)
+                mPlaybackSpeed = 1f;
 
             if (args != null && args.Length > 0)
             {
@@ -168,15 +172,18 @@ namespace LoogaSoft.SoundSystem.Runtime
                         case SoundArgs.ArgType.Volume: mVol = val; break;
                         case SoundArgs.ArgType.Pitch: mPitch = val; break;
                         case SoundArgs.ArgType.Delay: mDelay = val; break;
+                        case SoundArgs.ArgType.PlaybackSpeed: mPlaybackSpeed = val; break;
                     }
                 }
             }
+            
+            mPlaybackSpeed = Mathf.Max(0.01f, mPlaybackSpeed);
 
             //add explicit index request (overriding random/sequence logic)
             if (overrideIndex >= 0)
             {
                 if (overrideIndex < data.soundClips.Length)
-                    AddRequest(mVol, mPitch, mDelay, data.soundClips[overrideIndex], 0, pos, parent, overrideSource);
+                    AddRequest(mVol, mPitch, mDelay, mPlaybackSpeed, data.soundClips[overrideIndex], 0, pos, parent, overrideSource);
                 
                 return _requestBatch.Count > 0;
             }
@@ -186,12 +193,12 @@ namespace LoogaSoft.SoundSystem.Runtime
             {
                 case SoundPlayType.Random:
                     int pickedIndex = PickRandomIndexSmart(data);
-                    AddRequest(mVol, mPitch, mDelay, data.soundClips[pickedIndex], 0, pos, parent, overrideSource);
+                    AddRequest(mVol, mPitch, mDelay, mPlaybackSpeed, data.soundClips[pickedIndex], 0, pos, parent, overrideSource);
                     break;
                 case SoundPlayType.Simultaneous:
                     //add all clips to request with no extra delay
                     foreach (var clip in data.soundClips)
-                        AddRequest(mVol, mPitch, mDelay, clip, 0, pos, parent, overrideSource);
+                        AddRequest(mVol, mPitch, mDelay, mPlaybackSpeed, clip, 0, pos, parent, overrideSource);
                     break;
                 case SoundPlayType.Sequence:
                     float totalDelay = 0f;
@@ -200,7 +207,7 @@ namespace LoogaSoft.SoundSystem.Runtime
                         if (!IsSoundClipValid(clip)) 
                             continue;
                         
-                        AddRequest(mVol, mPitch, mDelay, clip, totalDelay, pos, parent, overrideSource);
+                        AddRequest(mVol, mPitch, mDelay, mPlaybackSpeed, clip, totalDelay, pos, parent, overrideSource);
                         
                         //calculate total duration of sequence based on clip pitch
                         float absPitch = Mathf.Abs(data.pitch.GetValue() * clip.pitch);
@@ -217,7 +224,7 @@ namespace LoogaSoft.SoundSystem.Runtime
             return _requestBatch.Count > 0;
         }
         
-        private static void AddRequest(float masterVol, float masterPitch, float masterDelay, SoundClip clipRef, float extraDelay, Vector3 pos, Transform parent, AudioSource overrideSource)
+        private static void AddRequest(float masterVol, float masterPitch, float masterDelay, float playbackSpeed, SoundClip clipRef, float extraDelay, Vector3 pos, Transform parent, AudioSource overrideSource)
         {
             if (!IsSoundClipValid(clipRef)) 
                 return;
@@ -225,7 +232,7 @@ namespace LoogaSoft.SoundSystem.Runtime
             // Combine master settings + clip settings + sequential offset
             float finalVol = masterVol * clipRef.volume;
             float finalPitch = masterPitch * clipRef.pitch;
-            float finalDelay = masterDelay + clipRef.delay + extraDelay;
+            float finalDelay = (masterDelay + clipRef.delay + extraDelay) / playbackSpeed;
 
             _requestBatch.Add(new PlaybackRequest(
                 clipRef.clip, 
@@ -448,16 +455,7 @@ namespace LoogaSoft.SoundSystem.Runtime
             }
             
             _tickManager = _rootObject.AddComponent<SoundTickManager>();
-            
-            /*#if UNITY_EDITOR
-            if (!Application.isPlaying)
-            {
-                EditorApplication.update += _tickManager.GetType()
-                    .GetMethod("EditorUpdate", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?
-                    .CreateDelegate(typeof(EditorApplication.CallbackFunction), _tickManager) as EditorApplication.CallbackFunction;
-            }
-            #endif*/
-            
+
             for (int i = 0; i < START_POOL_SIZE; i++)
                 ReturnSource(CreateNewSource());
         }
