@@ -22,13 +22,26 @@ namespace LoogaSoft.SoundSystem.Editor
                 initializedProp.boolValue = true;
             }
             
-            float clipWidth = position.width - (LineHeight * 2f);
+            //get new widths
+            float buttonWidth = LineHeight;
+            float durationWidth = 45f;
+
+            float rightSideWidth = durationWidth + (buttonWidth * 2f);
+            float clipWidth = position.width - rightSideWidth;
             
             Rect clipRect = new Rect(position.x, position.y, clipWidth, LineHeight);
-            Rect button1Rect = new Rect(clipRect.xMax, position.y, LineHeight, LineHeight);
-            Rect button2Rect = new Rect(button1Rect.xMax, position.y, LineHeight, LineHeight);
+            Rect durationRect = new Rect(clipRect.xMax, position.y, durationWidth, LineHeight);
+            Rect button1Rect = new Rect(durationRect.xMax, position.y, buttonWidth, LineHeight);
+            Rect button2Rect = new Rect(button1Rect.xMax, position.y, buttonWidth, LineHeight);
             
-            EditorGUI.PropertyField(clipRect, property.FindPropertyRelative("clip"));
+            SerializedProperty clipProp = property.FindPropertyRelative("clip");
+            EditorGUI.PropertyField(clipRect, clipProp);
+            
+            AudioClip realClip = clipProp.objectReferenceValue as AudioClip;
+            string durationText = realClip != null ? $"{realClip.length:F2}s" : "--";
+            
+            GUIStyle durationStyle = new GUIStyle(EditorStyles.helpBox) { alignment = TextAnchor.MiddleCenter };
+            GUI.Label(durationRect, durationText, durationStyle);
 
             Vector2 originalIconSize = EditorGUIUtility.GetIconSize();
             EditorGUIUtility.SetIconSize(new Vector2(LineHeight / 1.5f, LineHeight / 1.5f));;
