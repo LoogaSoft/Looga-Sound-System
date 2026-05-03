@@ -19,15 +19,15 @@ namespace LoogaSoft.SoundSystem.Editor
             float spacing = 2f;
             float buttonsWidth = dataValid ? (LineHeight * 2f) + spacing : 0f;
             
-            Rect foldoutRect = new Rect(position.x, position.y, position.width - buttonsWidth, LineHeight);
-            
             float indentOffset = EditorGUI.indentLevel * 15f;
+            float labelWidth = EditorGUIUtility.labelWidth - indentOffset;
 
             if (dataValid)
             {
+                Rect foldoutRect = new Rect(position.x, position.y, labelWidth, LineHeight);
+                
                 property.isExpanded = EditorGUI.Foldout(foldoutRect, property.isExpanded, label, true);
                 
-                float labelWidth = EditorGUIUtility.labelWidth - indentOffset;
                 Rect objectFieldRect = new Rect(
                     position.x + labelWidth + spacing, 
                     position.y, 
