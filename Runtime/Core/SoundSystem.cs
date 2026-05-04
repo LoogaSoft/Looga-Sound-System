@@ -22,6 +22,7 @@ namespace LoogaSoft.SoundSystem.Runtime
         private static readonly Queue<AudioSource> _sourcePool = new();
         private static readonly Dictionary<int, Queue<AudioSource>> _customPools = new();
         private static readonly Dictionary<int, int> _customPoolMap = new();
+        private static readonly Dictionary<int, Transform> _customPoolParents = new();
         
         private static readonly Dictionary<int, Action> _completeCallbacks = new();
         
@@ -145,7 +146,10 @@ namespace LoogaSoft.SoundSystem.Runtime
 
             //create queue if it doesn't exist
             if (!_customPools.ContainsKey(templateId))
+            {
                 _customPools[templateId] = new Queue<AudioSource>();
+                _customPoolParents[templateId] = template.transform;
+            }
 
             //populate queue
             for (int i = 0; i < size; i++)
@@ -453,20 +457,34 @@ namespace LoogaSoft.SoundSystem.Runtime
             source.clip = null;
             source.mute = true;
 
-            if (source.transform.parent != _rootObject.transform)
-                source.transform.SetParent(_rootObject.transform);
-
             int sourceId = source.GetInstanceID();
 
-            // Route the source back to its specific custom pool, OR the global pool
+            //route source back to its specific custom pool or global pool
             if (_customPoolMap.TryGetValue(sourceId, out int templateId))
             {
                 if (_customPools.TryGetValue(templateId, out Queue<AudioSource> pool))
                     pool.Enqueue(source);
+
+                //check if template object still exists
+                if (_customPoolParents.TryGetValue(templateId, out Transform customParent) && customParent != null)
+                {
+                    if (source.transform.parent != customParent)
+                        source.transform.SetParent(customParent);
+                }
+                else
+                {
+                    //fallback if template was destroyed, send to global root
+                    if (source.transform.parent != _rootObject.transform)
+                        source.transform.SetParent(_rootObject.transform);
+                }
             }
             else
             {
+                //standard global source behavior
                 _sourcePool.Enqueue(source);
+                
+                if (source.transform.parent != _rootObject.transform)
+                    source.transform.SetParent(_rootObject.transform);
             }
         }
 
@@ -504,6 +522,7 @@ namespace LoogaSoft.SoundSystem.Runtime
             _sourcePool.Clear();
             _customPools.Clear();
             _customPoolMap.Clear();
+            _customPoolParents.Clear();
             _completeCallbacks.Clear();
             _scratchIndices.Clear();
             _requestBatch.Clear();
