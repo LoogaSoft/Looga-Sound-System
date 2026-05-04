@@ -20,6 +20,8 @@ namespace LoogaSoft.SoundSystem.Runtime
         private static GameObject _rootObject;
         private static SoundTickManager _tickManager;
         private static readonly Queue<AudioSource> _sourcePool = new();
+        private static readonly Dictionary<int, Queue<AudioSource>> _customPools = new();
+        private static readonly Dictionary<int, int> _customPoolMap = new();
         
         private static readonly Dictionary<int, Action> _completeCallbacks = new();
         
@@ -129,6 +131,28 @@ namespace LoogaSoft.SoundSystem.Runtime
             //convert sound clip into playback instructions and execute
             if (ResolveSingleClip(clip, Vector3.zero, null, source))
                 ExecuteBatch();
+        }
+        
+        /// <summary>
+        /// Pre-allocates a custom pool of AudioSources based on a template audio source
+        /// </summary>
+        public static void CreatePool(AudioSource template, int size)
+        {
+            if (template == null) return;
+            if (_tickManager == null) InitializeTickManager();
+
+            int templateId = template.GetInstanceID();
+
+            //create queue if it doesn't exist
+            if (!_customPools.ContainsKey(templateId))
+                _customPools[templateId] = new Queue<AudioSource>();
+
+            //populate queue
+            for (int i = 0; i < size; i++)
+            {
+                AudioSource clone = CreateCustomSource(template, templateId);
+                _customPools[templateId].Enqueue(clone);
+            }
         }
         
         #endregion
@@ -280,6 +304,13 @@ namespace LoogaSoft.SoundSystem.Runtime
             if (absPitch < 0.01f) 
                 absPitch = 1f;
             float duration = req.clip.length / absPitch;
+
+            bool isPooled = true;
+            if (req.overrideSource != null)
+            {
+                int templateId = req.overrideSource.GetInstanceID();
+                isPooled = _customPools.ContainsKey(templateId);
+            }
             
             _tickManager.AddVoice(new ActiveVoice
             {
@@ -290,7 +321,7 @@ namespace LoogaSoft.SoundSystem.Runtime
                 StartTime = startTime,
                 EndTime = startTime + duration + DURATION_PADDING,
                 IsPlaying = false,
-                IsPooled = req.overrideSource == null
+                IsPooled = isPooled
             });
         }
         
@@ -370,13 +401,34 @@ namespace LoogaSoft.SoundSystem.Runtime
         
         private static AudioSource GetSource(PlaybackRequest req)
         {
+            AudioSource source;
+
             if (req.overrideSource != null)
-                return req.overrideSource;
-            
-            AudioSource source = GetPooledSource();
+            {
+                int templateId = req.overrideSource.GetInstanceID();
+
+                //check if a custom pool exists for this override source
+                if (_customPools.TryGetValue(templateId, out Queue<AudioSource> pool))
+                {
+                    source = pool.Count > 0 ? pool.Dequeue() : CreateCustomSource(req.overrideSource, templateId);
+                    source.gameObject.SetActive(true);
+                    source.mute = false;
+                }
+                else
+                {
+                    //legacy behavior (No custom pool was created, just use the single source)
+                    source = req.overrideSource;
+                }
+            }
+            else
+            {
+                //normal global pool
+                source = GetPooledSource();
+            }
+    
             if (req.parent != null) 
                 source.transform.SetParent(req.parent);
-            
+    
             source.transform.position = req.position;
             return source;
         }
@@ -395,17 +447,27 @@ namespace LoogaSoft.SoundSystem.Runtime
         
         internal static void ReturnSource(AudioSource source)
         {
-            if (source == null) 
-                return;
-            
+            if (source == null) return;
+    
             source.Stop();
             source.clip = null;
             source.mute = true;
 
             if (source.transform.parent != _rootObject.transform)
                 source.transform.SetParent(_rootObject.transform);
-            
-            _sourcePool.Enqueue(source);
+
+            int sourceId = source.GetInstanceID();
+
+            // Route the source back to its specific custom pool, OR the global pool
+            if (_customPoolMap.TryGetValue(sourceId, out int templateId))
+            {
+                if (_customPools.TryGetValue(templateId, out Queue<AudioSource> pool))
+                    pool.Enqueue(source);
+            }
+            else
+            {
+                _sourcePool.Enqueue(source);
+            }
         }
 
         private static AudioSource CreateNewSource()
@@ -418,6 +480,18 @@ namespace LoogaSoft.SoundSystem.Runtime
             
             return source;
         }
+
+        private static AudioSource CreateCustomSource(AudioSource template, int templateId)
+        {
+            AudioSource clone =  Object.Instantiate(template, template.transform);
+            clone.gameObject.name = $"[Custom Pool] {template.gameObject.name}";
+            clone.playOnAwake = false;
+            clone.mute = true;
+
+            _customPoolMap[clone.GetInstanceID()] = templateId;
+            
+            return clone;
+        }
         
         #endregion
         #region Initialization
@@ -428,6 +502,8 @@ namespace LoogaSoft.SoundSystem.Runtime
             _rootObject = null;
             _tickManager = null;
             _sourcePool.Clear();
+            _customPools.Clear();
+            _customPoolMap.Clear();
             _completeCallbacks.Clear();
             _scratchIndices.Clear();
             _requestBatch.Clear();
