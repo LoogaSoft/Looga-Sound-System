@@ -148,7 +148,7 @@ namespace LoogaSoft.SoundSystem.Runtime
             if (!_customPools.ContainsKey(templateId))
             {
                 _customPools[templateId] = new Queue<AudioSource>();
-                _customPoolParents[templateId] = template.transform;
+                _customPoolParents[templateId] = template.transform.parent;
             }
 
             //populate queue
@@ -501,7 +501,7 @@ namespace LoogaSoft.SoundSystem.Runtime
 
         private static AudioSource CreateCustomSource(AudioSource template, int templateId)
         {
-            AudioSource clone =  Object.Instantiate(template, template.transform);
+            AudioSource clone =  Object.Instantiate(template, template.transform.parent);
             clone.gameObject.name = $"[Custom Pool] {template.gameObject.name}";
             clone.playOnAwake = false;
             clone.mute = true;
