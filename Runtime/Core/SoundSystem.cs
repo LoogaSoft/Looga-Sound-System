@@ -23,6 +23,7 @@ namespace LoogaSoft.SoundSystem.Runtime
         private static readonly Dictionary<int, Queue<AudioSource>> _customPools = new();
         private static readonly Dictionary<int, int> _customPoolMap = new();
         private static readonly Dictionary<int, Transform> _customPoolParents = new();
+        private static readonly Dictionary<int, AudioSource> _cleanTemplates = new();
         
         private static readonly Dictionary<int, Action> _completeCallbacks = new();
         
@@ -148,7 +149,12 @@ namespace LoogaSoft.SoundSystem.Runtime
             if (!_customPools.ContainsKey(templateId))
             {
                 _customPools[templateId] = new Queue<AudioSource>();
-                _customPoolParents[templateId] = template.transform.parent;
+                _customPoolParents[templateId] = template.transform;
+                
+                AudioSource cleanTemplate = Object.Instantiate(template, _rootObject.transform);
+                cleanTemplate.gameObject.name = $"[Clean Template] {template.name}";
+                cleanTemplate.gameObject.SetActive(false);
+                _cleanTemplates[templateId] = cleanTemplate;
             }
 
             //populate queue
@@ -501,8 +507,11 @@ namespace LoogaSoft.SoundSystem.Runtime
 
         private static AudioSource CreateCustomSource(AudioSource template, int templateId)
         {
-            AudioSource clone =  Object.Instantiate(template, template.transform.parent);
+            AudioSource sourceToClone = _cleanTemplates.TryGetValue(templateId, out AudioSource cleanSrc) ? cleanSrc : template;
+            AudioSource clone =  Object.Instantiate(sourceToClone, template.transform);
+            
             clone.gameObject.name = $"[Custom Pool] {template.gameObject.name}";
+            clone.gameObject.SetActive(true);
             clone.playOnAwake = false;
             clone.mute = true;
 
@@ -523,6 +532,7 @@ namespace LoogaSoft.SoundSystem.Runtime
             _customPools.Clear();
             _customPoolMap.Clear();
             _customPoolParents.Clear();
+            _cleanTemplates.Clear();
             _completeCallbacks.Clear();
             _scratchIndices.Clear();
             _requestBatch.Clear();
